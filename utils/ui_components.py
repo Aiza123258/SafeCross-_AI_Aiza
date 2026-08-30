@@ -55,6 +55,11 @@ GLOBAL_CSS = """
     [data-testid="stSidebar"] .stMarkdown {
         color: #e2e8f0;
     }
+    [data-testid="stSidebar"] .stMarkdown p,
+    [data-testid="stSidebar"] .stMarkdown li,
+    [data-testid="stSidebar"] .stMarkdown span {
+        color: #e2e8f0 !important;
+    }
     [data-testid="stSidebar"] h3 {
         color: #ffffff !important;
         font-weight: 600;
@@ -65,6 +70,57 @@ GLOBAL_CSS = """
     [data-testid="stSidebar"] .stAlert {
         background: rgba(255,255,255,0.08);
         border: 1px solid rgba(255,255,255,0.15);
+        color: #e2e8f0 !important;
+    }
+
+    /* Sidebar navigation links */
+    [data-testid="stSidebar"] a,
+    [data-testid="stSidebar"] a:visited {
+        color: #e2e8f0 !important;
+    }
+    [data-testid="stSidebar"] a:hover {
+        color: #ffffff !important;
+        background: rgba(255,255,255,0.1) !important;
+    }
+    [data-testid="stSidebar"] a p,
+    [data-testid="stSidebar"] a span,
+    [data-testid="stSidebar"] a div {
+        color: #e2e8f0 !important;
+    }
+    [data-testid="stSidebar"] a:hover p,
+    [data-testid="stSidebar"] a:hover span,
+    [data-testid="stSidebar"] a:hover div {
+        color: #ffffff !important;
+    }
+
+    /* Selected/active page in sidebar */
+    [data-testid="stSidebar"] a[aria-current="page"],
+    [data-testid="stSidebar"] a[aria-current="page"]:visited {
+        background: rgba(255,255,255,0.15) !important;
+        border-left: 3px solid #60a5fa !important;
+    }
+    [data-testid="stSidebar"] a[aria-current="page"] p,
+    [data-testid="stSidebar"] a[aria-current="page"] span,
+    [data-testid="stSidebar"] a[aria-current="page"] div {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+
+    /* Sidebar nav header (app name link) */
+    [data-testid="stSidebarNav"] a,
+    [data-testid="stSidebarNav"] a:visited {
+        color: #e2e8f0 !important;
+    }
+    [data-testid="stSidebarNav"] a:hover {
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebarNav"] p {
+        color: #e2e8f0 !important;
+    }
+
+    /* Sidebar collapse button */
+    [data-testid="stSidebar"] button[kind="header"] {
+        color: #e2e8f0 !important;
     }
 
     .sc-hero {
