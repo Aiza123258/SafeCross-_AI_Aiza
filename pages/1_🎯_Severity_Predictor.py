@@ -1,0 +1,271 @@
+"""
+SafeCross AI - Severity Predictor Page
+"""
+
+import streamlit as st
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from utils.predictor import predict_severity, get_risk_factors
+from utils.data_loader import get_severity_color
+
+st.set_page_config(page_title="Severity Predictor - SafeCross AI", page_icon="", layout="wide")
+
+try:
+    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand
+    inject_global_css()
+    HAS_UI = True
+except ImportError:
+    HAS_UI = False
+
+if HAS_UI:
+    render_page_header("AI Accident Severity Predictor", "Input accident conditions and get AI-predicted severity levels from models trained on 1 million accident records")
+else:
+    st.markdown("## AI Accident Severity Predictor")
+
+with st.sidebar:
+    if HAS_UI:
+        render_sidebar_brand()
+
+st.markdown("""
+<div class="info-box">
+    <strong>How it works:</strong> Input the accident conditions below and our AI model will predict 
+    the likely severity level. The model was trained on 1 million accident records to learn patterns 
+    between conditions and outcomes.
+</div>
+""", unsafe_allow_html=True)
+
+# Input form
+st.markdown("### Input Accident Conditions")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    weather = st.selectbox(
+        "Weather Condition",
+        ["Clear", "Cloudy", "Rain", "Heavy Rain", "Fog", "Dust Storm"],
+        help="Current weather at time of accident"
+    )
+    
+    road_condition = st.selectbox(
+        "Road Condition",
+        ["Dry", "Wet", "Muddy", "Potholed", "Flooding", "Construction"],
+        help="State of the road surface"
+    )
+    
+    accident_cause = st.selectbox(
+        "Accident Cause",
+        ["Human Error", "Signal Violation", "Weather", "Poor Road", 
+         "Mechanical Failure", "Animal Crossing"],
+        help="Primary cause of the accident"
+    )
+
+with col2:
+    traffic_density = st.selectbox(
+        "Traffic Density",
+        ["Light", "Moderate", "Heavy"],
+        help="Traffic volume at time of accident"
+    )
+    
+    vehicles_involved = st.number_input(
+        "Vehicles Involved",
+        min_value=1,
+        max_value=20,
+        value=2,
+        help="Number of vehicles in the accident"
+    )
+    
+    nearby_accidents = st.number_input(
+        "Nearby Accidents (within 1km)",
+        min_value=0,
+        max_value=20,
+        value=1,
+        help="Number of recent accidents in the area"
+    )
+
+with col3:
+    import pandas as pd
+    accident_date = st.date_input(
+        "Accident Date",
+        value=pd.Timestamp.now().date(),
+        help="Date of the accident"
+    )
+    
+    accident_time = st.time_input(
+        "Accident Time",
+        value=pd.Timestamp.now().time(),
+        help="Time of the accident"
+    )
+    
+    # Calculate derived features
+    hour = accident_time.hour
+    day_of_week = pd.Timestamp(accident_date).dayofweek
+    is_night = 1 if (hour >= 20 or hour < 6) else 0
+
+st.markdown("---")
+
+# Predict button
+if st.button("🔮 Predict Severity", type="primary", use_container_width=True):
+    with st.spinner("Analyzing conditions..."):
+        # Make prediction
+        result = predict_severity(
+            weather=weather,
+            road_condition=road_condition,
+            accident_cause=accident_cause,
+            traffic_density=traffic_density,
+            vehicles_involved=vehicles_involved,
+            nearby_accidents=nearby_accidents,
+            hour=hour,
+            day_of_week=day_of_week,
+            is_night=is_night
+        )
+        
+        # Display results
+        st.markdown("### Prediction Results")
+        
+        # Main severity card with confidence
+        severity_color = get_severity_color(result['severity'])
+        confidence_pct = result['confidence'] * 100
+        
+        col1, col2, col3 = st.columns([2, 1, 1])
+        
+        with col1:
+            st.markdown(f"""
+            <div class="metric-card" style="border-left: 4px solid {severity_color};">
+                <h3 style="margin:0; color: #6b7280; font-size: 0.9rem;">Predicted Severity</h3>
+                <h1 style="margin:0.5rem 0; color: {severity_color}; font-size: 2.5rem;">
+                    {result['severity']}
+                </h1>
+                <p style="margin:0; color: #6b7280;">
+                    Risk Score: <strong>{result['risk_score']:.1f}/100</strong>
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            risk_color = result['risk_color']
+            st.markdown(f"""
+            <div class="metric-card" style="border-left: 4px solid {risk_color};">
+                <h3 style="margin:0; color: #6b7280; font-size: 0.9rem;">Risk Level</h3>
+                <h2 style="margin:0.5rem 0; color: {risk_color}; font-size: 2rem;">
+                    {result['risk_level']}
+                </h2>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            # Confidence indicator
+            if confidence_pct >= 70:
+                conf_color = "#10b981"
+                conf_text = "High"
+            elif confidence_pct >= 50:
+                conf_color = "#f59e0b"
+                conf_text = "Medium"
+            else:
+                conf_color = "#ef4444"
+                conf_text = "Low"
+            
+            st.markdown(f"""
+            <div class="metric-card" style="border-left: 4px solid {conf_color};">
+                <h3 style="margin:0; color: #6b7280; font-size: 0.9rem;">Model Confidence</h3>
+                <h2 style="margin:0.5rem 0; color: {conf_color}; font-size: 2rem;">
+                    {confidence_pct:.1f}%
+                </h2>
+                <p style="margin:0; color: #6b7280; font-size: 0.85rem;">
+                    {conf_text}
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown("---")
+        
+        # Probability distribution
+        st.markdown("### Severity Probability Distribution")
+        
+        import pandas as pd
+        prob_df = pd.DataFrame({
+            'Severity': list(result['probabilities'].keys()),
+            'Probability': list(result['probabilities'].values())
+        })
+        
+        # Create bar chart
+        chart_data = prob_df.set_index('Severity')
+        st.bar_chart(chart_data, color="#3b82f6", height=300)
+        
+        # Show exact probabilities
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Low", f"{result['probabilities']['Low']*100:.1f}%")
+        with col2:
+            st.metric("Medium", f"{result['probabilities']['Medium']*100:.1f}%")
+        with col3:
+            st.metric("High", f"{result['probabilities']['High']*100:.1f}%")
+        with col4:
+            st.metric("Critical", f"{result['probabilities']['Critical']*100:.1f}%")
+        
+        st.markdown("---")
+        
+        # Risk factors
+        st.markdown("### Key Risk Factors")
+        factors = get_risk_factors(weather, road_condition, accident_cause, hour, is_night)
+        for factor in factors:
+            st.markdown(factor)
+        
+        st.markdown("---")
+        
+        # Emergency priority
+        st.markdown("### Emergency Priority Recommendation")
+        
+        if result['risk_level'] == "Critical":
+            st.error("""
+            **🚨 CRITICAL PRIORITY** - Immediate emergency response required
+            
+            **Recommended Actions:**
+            - Call Rescue 1122 immediately
+            - Contact Police 15
+            - Alert nearest hospital emergency department
+            - Prepare for multiple casualties
+            - Coordinate traffic diversion
+            """)
+        elif result['risk_level'] == "High":
+            st.warning("""
+            **⚠️ HIGH PRIORITY** - Urgent response needed
+            
+            **Recommended Actions:**
+            - Call Rescue 1122
+            - Contact Police 15
+            - Monitor for escalation
+            - Prepare emergency services
+            """)
+        elif result['risk_level'] == "Medium":
+            st.info("""
+            **ℹ️ MEDIUM PRIORITY** - Standard response
+            
+            **Recommended Actions:**
+            - Contact local emergency services
+            - Assess situation on ground
+            - Report to traffic police
+            - Monitor conditions
+            """)
+        else:
+            st.success("""
+            **✅ LOW PRIORITY** - Minor incident
+            
+            **Recommended Actions:**
+            - Standard reporting procedures
+            - Document incident
+            - Clear traffic if possible
+            - Monitor for changes
+            """)
+        
+        st.markdown("---")
+        st.caption("""
+        **Disclaimer:** This prediction is based on AI analysis of general accident patterns. 
+        It is not a substitute for professional emergency assessment. Always contact official 
+        emergency services (Rescue 1122, Police 15) for actual incidents.
+        """)
+
+if HAS_UI:
+    render_footer()
