@@ -38,7 +38,7 @@ Always call official emergency numbers for actual incidents.
 """)
 
 # Emergency contacts
-st.markdown("### 📞 Emergency Contact Numbers - Pakistan")
+st.markdown("### :material_phone: Emergency Contact Numbers - Pakistan")
 
 col1, col2, col3 = st.columns(3)
 
@@ -75,7 +75,7 @@ with col3:
 st.markdown("---")
 
 # Scenario-based guidance
-st.markdown("### 🎯 Scenario-Based Response Guidance")
+st.markdown("### :material_emergency: Scenario-Based Response Guidance")
 
 scenario = st.selectbox(
     "Select Accident Scenario",
@@ -286,9 +286,9 @@ if scenario != "Select a scenario...":
 st.markdown("---")
 
 # General first aid
-st.markdown("### 🏥 Basic First Aid Guidelines")
+st.markdown("### :material_medical_services: Basic First Aid Guidelines")
 
-with st.expander("📋 Bleeding Control"):
+with st.expander("Bleeding Control"):
     st.markdown("""
     **For Severe Bleeding:**
     1. Apply direct pressure with clean cloth
@@ -303,7 +303,7 @@ with st.expander("📋 Bleeding Control"):
     - Use dirty materials
     """)
 
-with st.expander("📋 Fracture Management"):
+with st.expander("Fracture Management"):
     st.markdown("""
     **For Suspected Fractures:**
     1. Do NOT move the injured person
@@ -321,7 +321,7 @@ with st.expander("📋 Fracture Management"):
     - Grinding sensation
     """)
 
-with st.expander("📋 Shock Management"):
+with st.expander("Shock Management"):
     st.markdown("""
     **Recognizing Shock:**
     - Pale, cold, clammy skin

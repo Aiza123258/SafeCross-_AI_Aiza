@@ -69,3 +69,5 @@ artifacts/confusion_matrix_*.png
 # CatBoost training logs
 catboost_info/
 CLEANUP_SUMMARY.md
+
+safecross.db

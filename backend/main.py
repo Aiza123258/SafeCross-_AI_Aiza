@@ -1,8 +1,16 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from pydantic import BaseModel
 from typing import Optional
+from sqlalchemy.orm import Session
 
 from utils.predictor import predict_severity
+
+from .database import engine, get_db
+from .models import Base, Prediction
+
+
+# Create database tables automatically
+Base.metadata.create_all(bind=engine)
 
 
 app = FastAPI(
@@ -43,8 +51,10 @@ def health():
 
 
 @app.post("/predict/severity")
-def predict_severity_api(data: SeverityRequest):
-
+def predict_severity_api(
+    data: SeverityRequest,
+    db: Session = Depends(get_db)
+):
     result = predict_severity(
         weather=data.weather,
         road_condition=data.road_condition,
@@ -60,7 +70,78 @@ def predict_severity_api(data: SeverityRequest):
         month=data.month
     )
 
+    severity = result.get("severity", "Unknown")
+
+    probabilities = result.get("probabilities", {})
+    confidence = probabilities.get(severity, 0.0)
+
+    prediction = Prediction(
+        severity=severity,
+        confidence=float(confidence)
+    )
+
+    db.add(prediction)
+    db.commit()
+    db.refresh(prediction)
+
     return {
         "status": "success",
-        "prediction": result
+        "prediction": result,
+        "database": {
+            "saved": True,
+            "prediction_id": prediction.id
+        }
+    }
+
+
+@app.get("/predictions")
+def get_predictions(
+    db: Session = Depends(get_db)
+):
+    predictions = (
+        db.query(Prediction)
+        .order_by(Prediction.id.desc())
+        .all()
+    )
+
+    return {
+        "status": "success",
+        "count": len(predictions),
+        "predictions": [
+            {
+                "id": prediction.id,
+                "severity": prediction.severity,
+                "confidence": prediction.confidence,
+                "created_at": prediction.created_at
+            }
+            for prediction in predictions
+        ]
+    }
+
+
+@app.get("/predictions/{prediction_id}")
+def get_prediction(
+    prediction_id: int,
+    db: Session = Depends(get_db)
+):
+    prediction = (
+        db.query(Prediction)
+        .filter(Prediction.id == prediction_id)
+        .first()
+    )
+
+    if not prediction:
+        return {
+            "status": "error",
+            "message": "Prediction not found"
+        }
+
+    return {
+        "status": "success",
+        "prediction": {
+            "id": prediction.id,
+            "severity": prediction.severity,
+            "confidence": prediction.confidence,
+            "created_at": prediction.created_at
+        }
     }
