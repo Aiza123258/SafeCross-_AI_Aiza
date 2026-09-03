@@ -26,13 +26,14 @@ from utils.smart_barrier import (
 st.set_page_config(page_title="Emergency Priority - SafeCross AI", page_icon="", layout="wide")
 
 try:
-    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand
+    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand, render_sidebar_about, render_sidebar_nav, render_sidebar_footer, render_top_nav, render_detection_settings_panel
     inject_global_css()
     HAS_UI = True
 except ImportError:
     HAS_UI = False
 
 if HAS_UI:
+    render_top_nav()
     render_page_header("Emergency Vehicle Priority & Smart Barrier", "AI-assisted emergency recognition, safety-aware decision engine, and explainable smart barrier simulation")
 else:
     st.markdown("""
@@ -62,6 +63,10 @@ event_log: list = st.session_state.emergency_event_log
 with st.sidebar:
     if HAS_UI:
         render_sidebar_brand()
+        render_sidebar_about()
+        render_sidebar_nav()
+        render_detection_settings_panel()
+        render_sidebar_footer()
     st.markdown("### Emergency Scenario Demo")
 
     scenario = st.selectbox(
@@ -69,36 +74,6 @@ with st.sidebar:
         options=list(SMART_BARRIER_SCENARIOS.keys()),
         format_func=lambda k: SMART_BARRIER_SCENARIOS[k]["label"],
     )
-
-    st.markdown("---")
-    st.markdown("### Scenario Info")
-    sc = SMART_BARRIER_SCENARIOS[scenario]
-    st.info(f"{sc['description']}\n\n**Expected Decision:** {sc['expected_decision']}")
-
-    st.markdown("---")
-    st.markdown("""
-    <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 0.8rem;">
-        <strong>SIMULATION MODE</strong><br>
-        <span style="font-size: 0.85rem;">
-        Standard YOLOv8 COCO does not include an ambulance class.
-        Scenarios use simulated inputs for prototype demonstration.
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("---")
-    if st.button("Clear Event Log", use_container_width=True):
-        st.session_state.emergency_event_log = []
-        st.rerun()
-
-    st.markdown("---")
-    st.markdown("### About")
-    st.info("""
-    The Smart Barrier Decision Engine evaluates emergency priority, pedestrian safety,
-    proximity analysis, and traffic conditions to produce explainable barrier decisions.
-
-    **Safety hierarchy:** Pedestrian conflict > Crossing activity > Emergency priority > Normal traffic.
-    """)
 
 
 # ── Process Scenario ─────────────────────────────────────────────────────────
@@ -155,6 +130,13 @@ st.markdown(f"""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+sc = SMART_BARRIER_SCENARIOS[scenario]
+info_col1, info_col2 = st.columns([3, 1])
+with info_col1:
+    st.info(f"**{sc['label']}** — {sc['description']}\n\n**Expected Decision:** {sc['expected_decision']}")
+with info_col2:
+    st.warning("SIMULATION MODE — Standard YOLOv8 COCO does not include an ambulance class. Scenarios use simulated inputs.")
 
 
 # ── Traffic Conditions ───────────────────────────────────────────────────────
@@ -304,7 +286,13 @@ st.markdown("---")
 
 # ── Event Log ────────────────────────────────────────────────────────────────
 
-st.markdown("### Emergency Event Log")
+log_header, log_action = st.columns([4, 1])
+with log_header:
+    st.markdown("### Emergency Event Log")
+with log_action:
+    if st.button("Clear Log", use_container_width=True):
+        st.session_state.emergency_event_log = []
+        st.rerun()
 
 if event_log:
     log_rows = []

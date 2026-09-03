@@ -44,7 +44,7 @@ except ImportError:
 st.set_page_config(page_title="Live Detection - SafeCross AI", page_icon="", layout="wide")
 
 try:
-    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand
+    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand, render_sidebar_about, render_sidebar_nav, render_sidebar_footer, render_top_nav
     inject_global_css()
     HAS_UI = True
 except ImportError:
@@ -60,8 +60,13 @@ if not HAS_UI:
 with st.sidebar:
     if HAS_UI:
         render_sidebar_brand()
+        render_sidebar_about()
+        render_sidebar_nav()
+
     st.markdown("### Detection Settings")
 
+    # Keep the sidebar compact like the reference design. Advanced controls
+    # remain available without making the sidebar vertically scroll.
     source_type = st.radio(
         "Input Source",
         ["Image Upload", "Webcam", "Video File"],
@@ -76,69 +81,65 @@ with st.sidebar:
     model_map = {"n": "n", "s": "s", "m": "m"}
     selected_size = model_map[model_size[0]]
 
-    confidence_threshold = st.slider("Confidence Threshold", 0.05, 0.95, 0.25, 0.05)
+    st.markdown(
+        '<div style="font-size:0.78rem;color:rgba(255,255,255,.72);margin:.25rem 0 .15rem;">'
+        'AI Model: <strong style="color:#10b981;">YOLOv8n</strong></div>'
+        '<div style="font-size:0.78rem;color:rgba(255,255,255,.72);">Status: '
+        '<strong style="color:#10b981;">● Ready</strong></div>',
+        unsafe_allow_html=True,
+    )
 
-    st.markdown("---")
+    with st.expander("Advanced Detection Settings", expanded=False):
+        confidence_threshold = st.slider(
+            "Confidence Threshold", 0.05, 0.95, 0.25, 0.05
+        )
 
-    enable_proximity = st.checkbox("Enable Proximity Analysis", value=True)
-
-    if enable_proximity:
-        danger_threshold = st.slider("Danger Zone (pixels)", 20, 200, 80, 10,
-                                     help="Edge-to-edge distance below which a pedestrian-vehicle pair is classified as DANGER")
-        warning_threshold = st.slider("Warning Zone (pixels)", 50, 400, 180, 10,
-                                      help="Edge-to-edge distance below which a pair is classified as WARNING")
-        if warning_threshold <= danger_threshold:
-            warning_threshold = danger_threshold + 20
-            st.warning(f"Warning threshold adjusted to {warning_threshold}px (must exceed danger threshold)")
-    else:
-        danger_threshold = 80
-        warning_threshold = 180
-
-    st.markdown("---")
-
-    enable_safety = st.checkbox("Pedestrian Safety Intelligence", value=True)
-
-    if enable_safety and SAFETY_AVAILABLE:
-        enable_crossing_zone = st.checkbox("Show Crossing Zone", value=True)
-        if enable_crossing_zone:
-            zone_x = st.slider("Zone X Position", 0.0, 0.8, 0.35, 0.05,
-                               help="Horizontal position of crossing zone (normalized)")
-            zone_y = st.slider("Zone Y Position", 0.0, 0.8, 0.55, 0.05,
-                               help="Vertical position of crossing zone (normalized)")
-            zone_w = st.slider("Zone Width", 0.05, 0.6, 0.30, 0.05,
-                               help="Width of crossing zone (normalized)")
-            zone_h = st.slider("Zone Height", 0.05, 0.6, 0.25, 0.05,
-                               help="Height of crossing zone (normalized)")
+        enable_proximity = st.checkbox("Enable Proximity Analysis", value=True)
+        if enable_proximity:
+            danger_threshold = st.slider(
+                "Danger Zone (pixels)", 20, 200, 80, 10,
+                help="Edge-to-edge distance below which a pedestrian-vehicle pair is DANGER"
+            )
+            warning_threshold = st.slider(
+                "Warning Zone (pixels)", 50, 400, 180, 10,
+                help="Edge-to-edge distance below which a pair is WARNING"
+            )
+            if warning_threshold <= danger_threshold:
+                warning_threshold = danger_threshold + 20
         else:
+            danger_threshold, warning_threshold = 80, 180
+
+        enable_safety = st.checkbox("Pedestrian Safety Intelligence", value=True)
+        if enable_safety and SAFETY_AVAILABLE:
+            enable_crossing_zone = st.checkbox("Show Crossing Zone", value=True)
+            if enable_crossing_zone:
+                zone_x = st.slider("Zone X Position", 0.0, 0.8, 0.35, 0.05)
+                zone_y = st.slider("Zone Y Position", 0.0, 0.8, 0.55, 0.05)
+                zone_w = st.slider("Zone Width", 0.05, 0.6, 0.30, 0.05)
+                zone_h = st.slider("Zone Height", 0.05, 0.6, 0.25, 0.05)
+            else:
+                zone_x, zone_y, zone_w, zone_h = 0.35, 0.55, 0.30, 0.25
+        else:
+            enable_crossing_zone = False
             zone_x, zone_y, zone_w, zone_h = 0.35, 0.55, 0.30, 0.25
-    else:
-        enable_crossing_zone = False
+
+    # Defaults used when the advanced panel is collapsed.
+    if "confidence_threshold" not in locals():
+        confidence_threshold = 0.25
+        enable_proximity = True
+        danger_threshold, warning_threshold = 80, 180
+        enable_safety = True
+        enable_crossing_zone = True
         zone_x, zone_y, zone_w, zone_h = 0.35, 0.55, 0.30, 0.25
 
-    st.markdown("---")
-    st.markdown("### Detection Classes")
-    st.markdown("""
-    <div style="line-height: 2;">
-        <span class="legend-dot" style="background: rgb(0,200,255);"></span> Person (Pedestrian)<br>
-        <span class="legend-dot" style="background: rgb(50,220,50);"></span> Car<br>
-        <span class="legend-dot" style="background: rgb(255,165,0);"></span> Motorcycle<br>
-        <span class="legend-dot" style="background: rgb(220,50,220);"></span> Bus<br>
-        <span class="legend-dot" style="background: rgb(50,50,255);"></span> Truck
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown("### About")
-    st.info("""
-    This module uses **YOLOv8** (You Only Look Once v8) for real-time object detection.
-    It detects vehicles and pedestrians in images, video, and live camera feeds
-    to support road safety monitoring at intersections and crossings.
-    """)
+    if HAS_UI:
+        render_sidebar_footer()
 
 
 # ── Page Header ──────────────────────────────────────────────────────────────
 
 if HAS_UI:
+    render_top_nav()
     render_page_header("Live Vehicle & Pedestrian Detection", "Real-time AI-powered detection using YOLOv8 — vehicles, pedestrians, proximity analysis, and safety intelligence")
 else:
     st.markdown("## Live Vehicle & Pedestrian Detection")
@@ -508,10 +509,11 @@ def show_barrier_recommendation(safety_result, proximity_result, detections):
 # ── Mode: Image Upload ──────────────────────────────────────────────────────
 
 if source_type == "Image Upload":
+    st.markdown("#### Upload an image of a road scene")
     uploaded = st.file_uploader(
         "Upload an image of a road scene",
         type=["jpg", "jpeg", "png", "bmp"],
-        help="Upload a photo of a road, intersection, or crossing to analyze."
+        help="200MB per file • JPG, PNG, BMP",
     )
 
     if uploaded is not None:

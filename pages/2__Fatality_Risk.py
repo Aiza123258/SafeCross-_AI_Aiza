@@ -14,13 +14,14 @@ from utils.predictor import predict_fatality_risk, get_risk_factors
 st.set_page_config(page_title="Fatality Risk - SafeCross AI", page_icon="", layout="wide")
 
 try:
-    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand
+    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand, render_sidebar_about, render_sidebar_nav, render_sidebar_footer, render_top_nav, render_detection_settings_panel
     inject_global_css()
     HAS_UI = True
 except ImportError:
     HAS_UI = False
 
 if HAS_UI:
+    render_top_nav()
     render_page_header("Fatality Risk Assessment", "Evaluate the probability of fatal outcomes based on accident conditions — decision support only")
 else:
     st.markdown("## Fatality Risk Assessment")
@@ -28,11 +29,15 @@ else:
 with st.sidebar:
     if HAS_UI:
         render_sidebar_brand()
+        render_sidebar_about()
+        render_sidebar_nav()
+        render_detection_settings_panel()
+        render_sidebar_footer()
 
 st.markdown("""
-<div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
-    <strong>Important:</strong> This assessment evaluates the probability of fatal outcomes 
-    based on accident conditions. It is a decision support tool only - always contact 
+<div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+    <strong>Note:</strong> This assessment evaluates the probability of fatal outcomes
+    based on accident conditions. It is a decision support tool only - always contact
     Rescue 1122 and Police 15 for actual emergencies.
 </div>
 """, unsafe_allow_html=True)

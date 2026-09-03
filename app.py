@@ -10,8 +10,10 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from utils.ui_components import (
     inject_global_css, render_hero, render_metric_card,
+    render_compact_metric_card,
     render_feature_card, render_pipeline_step, render_footer,
-    render_section_title, render_sidebar_brand,
+    render_section_title, render_sidebar_brand, render_sidebar_about, render_sidebar_nav,
+    render_sidebar_footer, render_top_nav, render_detection_settings_panel,
 )
 
 st.set_page_config(
@@ -23,18 +25,14 @@ st.set_page_config(
 
 inject_global_css()
 
+render_top_nav()
+
 with st.sidebar:
     render_sidebar_brand()
-    st.markdown("### About")
-    st.markdown("""
-    **SafeCross AI** is an AI-powered road safety platform combining
-    real-time computer vision, pedestrian safety analysis, emergency
-    vehicle prioritization, and intelligent barrier decision support.
-
-    **Disclaimer:** This system provides decision support only.
-    Always contact official emergency services (Rescue 1122, Police 15)
-    for actual emergencies.
-    """)
+    render_sidebar_about()
+    render_sidebar_nav()
+    render_detection_settings_panel()
+    render_sidebar_footer()
 
 
 # ── Hero Section ─────────────────────────────────────────────────────────────
@@ -46,29 +44,12 @@ render_hero(
 )
 
 
-# ── System Status KPIs ───────────────────────────────────────────────────────
-
-render_section_title("System Status")
-
-k1, k2, k3, k4, k5 = st.columns(5)
-with k1:
-    render_metric_card("AI Detection", "ACTIVE", "#10b981", "YOLOv8 Ready")
-with k2:
-    render_metric_card("Pedestrian Safety", "ACTIVE", "#10b981", "Crossing Zone AI")
-with k3:
-    render_metric_card("Emergency Priority", "ACTIVE", "#10b981", "State Machine")
-with k4:
-    render_metric_card("Smart Barrier", "SIMULATION", "#f59e0b", "Decision Engine")
-with k5:
-    render_metric_card("Model Status", "READY", "#3b82f6", "Severity + Fatality")
-
-
 # ── Pipeline Visualization ───────────────────────────────────────────────────
 
 render_section_title("From Detection to Decision")
 
 st.markdown("""
-<div style="text-align: center; color: #6b7280; font-size: 0.9rem; margin-bottom: 1rem;">
+<div style="text-align: center; color: #6b7280; font-size: 0.9rem; margin-bottom: 0.8rem;">
     The complete SafeCross AI pipeline — from camera input to actionable safety recommendations.
 </div>
 """, unsafe_allow_html=True)
@@ -89,7 +70,22 @@ with p6:
 with p7:
     render_pipeline_step("", "Action", active=True)
 
-st.markdown("---")
+
+# ── System Status KPIs ───────────────────────────────────────────────────────
+
+render_section_title("System Status")
+
+k1, k2, k3, k4, k5 = st.columns(5)
+with k1:
+    render_compact_metric_card("AI Detection", "ACTIVE", "#10b981", "YOLOv8 Ready")
+with k2:
+    render_compact_metric_card("Pedestrian Safety", "ACTIVE", "#10b981", "Crossing Zone AI")
+with k3:
+    render_compact_metric_card("Emergency Priority", "ACTIVE", "#10b981", "State Machine")
+with k4:
+    render_compact_metric_card("Smart Barrier", "SIMULATION", "#f59e0b", "Decision Engine")
+with k5:
+    render_compact_metric_card("Model Status", "READY", "#3b82f6", "Severity + Fatality")
 
 
 # ── Feature Cards ────────────────────────────────────────────────────────────
@@ -148,17 +144,15 @@ with f8:
         "ACTIVE", "#10b981",
     )
 
-st.markdown("---")
-
 
 # ── Quick Start Guide ────────────────────────────────────────────────────────
 
 render_section_title("Quick Start")
 
 st.markdown("""
-<div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem;">
+<div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 1rem; margin-bottom: 0.5rem;">
     <strong style="font-size: 1.05rem;">Recommended Demo Path</strong>
-    <div style="margin-top: 0.8rem; line-height: 1.8; color: #374151;">
+    <div style="margin-top: 0.5rem; line-height: 1.5; color: #374151;">
         <strong>1.</strong> Start here to understand the platform<br>
         <strong>2.</strong> <strong>Live Detection</strong> — Upload an image to see AI detection, proximity analysis, pedestrian safety, and barrier recommendation<br>
         <strong>3.</strong> <strong>Emergency Priority</strong> — Try different emergency scenarios and watch the smart barrier decision engine respond<br>

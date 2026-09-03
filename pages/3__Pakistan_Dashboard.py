@@ -16,13 +16,14 @@ from utils.data_loader import load_pakistan_stats
 st.set_page_config(page_title="Pakistan Dashboard - SafeCross AI", page_icon="", layout="wide")
 
 try:
-    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand
+    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand, render_sidebar_about, render_sidebar_nav, render_sidebar_footer, render_top_nav, render_detection_settings_panel
     inject_global_css()
     HAS_UI = True
 except ImportError:
     HAS_UI = False
 
 if HAS_UI:
+    render_top_nav()
     render_page_header("Pakistan Accident Statistics Dashboard", "Official provincial accident statistics and trends (2008-2019)")
 else:
     st.markdown("## Pakistan Accident Statistics Dashboard")
@@ -30,6 +31,10 @@ else:
 with st.sidebar:
     if HAS_UI:
         render_sidebar_brand()
+        render_sidebar_about()
+        render_sidebar_nav()
+        render_detection_settings_panel()
+        render_sidebar_footer()
 
 st.info("""
 **Data Source:** Official Pakistan provincial accident statistics (2008-09 to 2018-19).
@@ -260,10 +265,10 @@ st.markdown("---")
 # Model Performance Section
 st.markdown("### 🤖 AI Model Performance")
 
-st.warning("""
-**Important Disclaimer:** The AI prediction models were trained on a synthetic/generated dataset 
-of 1 million accident records to learn general accident patterns. The Pakistan statistics shown 
-above are separate historical data from official sources. The model predictions are probabilistic 
+st.info("""
+**Note:** The AI prediction models were trained on a synthetic/generated dataset
+of 1 million accident records to learn general accident patterns. The Pakistan statistics shown
+above are separate historical data from official sources. The model predictions are probabilistic
 estimates based on learned patterns, not verified Pakistani accident data.
 """)
 

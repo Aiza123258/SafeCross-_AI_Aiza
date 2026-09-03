@@ -7,7 +7,8 @@ import numpy as np
 import pandas as pd
 from utils.data_loader import (
     load_severity_model, load_fatality_model, 
-    load_encoders, load_target_encoder, load_feature_meta
+    load_encoders, load_target_encoder, load_feature_meta,
+    load_severity_model_v2, load_encoders_v2, load_feature_meta_v2
 )
 
 def _build_full_features(weather, road_condition, accident_cause, traffic_density,
@@ -203,6 +204,167 @@ def predict_severity(weather, road_condition, accident_cause, traffic_density,
         risk_level = "Low"
         risk_color = "#10b981"
     
+    return {
+        'severity': severity,
+        'probabilities': prob_dict,
+        'risk_score': risk_score,
+        'risk_level': risk_level,
+        'risk_color': risk_color,
+        'confidence': float(confidence)
+    }
+
+# --- V2 cause mapping: UI options → V2 encoder classes ---
+_V2_CAUSE_MAP = {
+    "Human Error": "Human Error",
+    "Signal Violation": "Signal Violation",
+    "Weather": "Weather",
+    "Poor Road": "Human Error",       # No "Poor Road" in V2; closest safe fallback
+    "Mechanical Failure": "Mechanical Failure",
+    "Animal Crossing": "Animal Crossing",
+}
+
+def _derive_lighting(hour):
+    """Derive lighting condition from hour of day."""
+    if 6 <= hour <= 17:
+        return "Daylight"
+    elif hour in (5, 18):
+        return "Dawn-Dusk"
+    elif 19 <= hour <= 21:
+        return "Street-lit"
+    else:
+        return "Unlit"
+
+def _derive_peak_off_peak(hour):
+    """Derive peak/off-peak from hour."""
+    if (7 <= hour <= 9) or (17 <= hour <= 19):
+        return "Peak"
+    return "Off-peak"
+
+def predict_severity_v2(weather, road_condition, accident_cause, traffic_density,
+                        vehicles_involved, nearby_accidents, hour, day_of_week, is_night,
+                        speed_at_impact_kmh, collision_type,
+                        accident_date_str, accident_time_str,
+                        latitude=0.0, longitude=0.0):
+    """
+    Predict accident severity using the Pakistan V2 model (HistGradientBoosting, 98.5% accuracy).
+    
+    Builds all 39 features: 10 from UI, 2 derived from time, 27 from documented dataset
+    medians/modes. Falls back to honest model if V2 artifacts are missing.
+    
+    Returns same dict format as predict_severity().
+    """
+    model = load_severity_model_v2()
+    encoders_data = load_encoders_v2()
+    meta = load_feature_meta_v2()
+
+    if model is None or encoders_data is None or meta is None:
+        return None
+
+    y_encoder = encoders_data['y_encoder']
+    feature_encoders = encoders_data['feature_encoders']
+    feature_names = meta['features']
+
+    v2_cause = _V2_CAUSE_MAP.get(accident_cause, "Human Error")
+
+    features = {
+        # --- From UI inputs ---
+        'weather': weather,
+        'road_condition': road_condition,
+        'accident_cause': v2_cause,
+        'num_vehicles': int(vehicles_involved),
+        'speed_at_impact_kmh': float(speed_at_impact_kmh),
+        'collision_type': collision_type,
+        'date': accident_date_str,
+        'time': accident_time_str,
+
+        # --- Derived from hour ---
+        'lighting': _derive_lighting(hour),
+        'peak_off_peak': _derive_peak_off_peak(hour),
+
+        # --- Categorical defaults (dataset mode) ---
+        'province': 'Punjab',
+        'district': 'Islamabad',
+        'road_type': 'Urban',
+        'surface_material': 'Asphalt',
+        'road_curvature': 'Straight',
+        'road_gradient': 'Flat',
+        'median_type': 'Physical',
+        'shoulder_available': 'Yes',
+        'vehicle_types': 'Motorcycle;Motorcycle',
+        'overloading_detected': 'No',
+        'helmet_usage': 'No',
+        'seatbelt_usage': 'Yes',
+        'mobile_phone_suspected': 'No',
+        'alcohol_drug_suspected': 'No',
+        'evasive_action': 'Braking',
+        'impact_point': 'Front',
+
+        # --- Numeric defaults (dataset median) ---
+        'latitude': float(latitude),
+        'longitude': float(longitude),
+        'visibility_meters': 267.0,
+        'temperature_c': 29.8,
+        'wind_speed_kmh': 8.4,
+        'number_of_lanes': 2.0,
+        'speed_limit_kmh': 60.0,
+        'vehicle_avg_age_years': 10.9,
+        'driver_age': 34.0,
+        'num_collisions': 1.0,
+        'traffic_volume_per_hour': 1023.0,
+        'distance_to_hospital_km': 8.4,
+        'expected_response_min': 15.6,
+    }
+
+    cat_cols = set(meta['cat_cols'])
+    num_cols = set(meta['num_cols'])
+
+    X_encoded = {}
+    for col in feature_names:
+        if col in cat_cols and col in feature_encoders:
+            le = feature_encoders[col]
+            val = str(features.get(col, ""))
+            if val not in le.classes_:
+                val = le.classes_[0]
+            X_encoded[col] = le.transform([val])[0]
+        else:
+            X_encoded[col] = float(features.get(col, 0))
+
+    X_array = np.array([[X_encoded.get(col, 0) for col in feature_names]])
+
+    expected_features = model.n_features_in_
+    actual_features = X_array.shape[1]
+    if actual_features != expected_features:
+        raise ValueError(
+            f"V2 severity model feature mismatch: expected {expected_features} features, "
+            f"got {actual_features}. Schema: {feature_names}"
+        )
+
+    prediction = model.predict(X_array)[0]
+    probabilities = model.predict_proba(X_array)[0]
+
+    severity = y_encoder.inverse_transform([prediction])[0]
+    prob_dict = {
+        y_encoder.inverse_transform([i])[0]: float(prob)
+        for i, prob in enumerate(probabilities)
+    }
+
+    severity_weights = {'Low': 0, 'Medium': 33, 'High': 66, 'Critical': 100}
+    risk_score = sum(prob_dict[sev] * severity_weights[sev] for sev in prob_dict)
+    confidence = max(probabilities)
+
+    if risk_score >= 75:
+        risk_level = "Critical"
+        risk_color = "#ef4444"
+    elif risk_score >= 50:
+        risk_level = "High"
+        risk_color = "#f97316"
+    elif risk_score >= 25:
+        risk_level = "Medium"
+        risk_color = "#f59e0b"
+    else:
+        risk_level = "Low"
+        risk_color = "#10b981"
+
     return {
         'severity': severity,
         'probabilities': prob_dict,

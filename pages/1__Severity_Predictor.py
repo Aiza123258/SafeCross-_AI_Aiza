@@ -8,19 +8,20 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from utils.predictor import predict_severity, get_risk_factors
+from utils.predictor import predict_severity, predict_severity_v2, get_risk_factors
 from utils.data_loader import get_severity_color
 
 st.set_page_config(page_title="Severity Predictor - SafeCross AI", page_icon="", layout="wide")
 
 try:
-    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand
+    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand, render_sidebar_about, render_sidebar_nav, render_sidebar_footer, render_top_nav, render_detection_settings_panel
     inject_global_css()
     HAS_UI = True
 except ImportError:
     HAS_UI = False
 
 if HAS_UI:
+    render_top_nav()
     render_page_header("AI Accident Severity Predictor", "Input accident conditions and get AI-predicted severity levels from models trained on 1 million accident records")
 else:
     st.markdown("## AI Accident Severity Predictor")
@@ -28,6 +29,10 @@ else:
 with st.sidebar:
     if HAS_UI:
         render_sidebar_brand()
+        render_sidebar_about()
+        render_sidebar_nav()
+        render_detection_settings_panel()
+        render_sidebar_footer()
 
 st.markdown("""
 <div class="info-box">
@@ -104,13 +109,33 @@ with col3:
     day_of_week = pd.Timestamp(accident_date).dayofweek
     is_night = 1 if (hour >= 20 or hour < 6) else 0
 
+col_a, col_b = st.columns(2)
+
+with col_a:
+    speed_at_impact_kmh = st.number_input(
+        "Speed at Impact (km/h)",
+        min_value=20,
+        max_value=160,
+        value=60,
+        help="Estimated vehicle speed at the moment of impact"
+    )
+
+with col_b:
+    collision_type = st.selectbox(
+        "Collision Type",
+        ["Head-on", "Rear-end", "Side-swipe", "Fixed-object", "Rollover", "Pedestrian", "Multi-vehicle pileup"],
+        help="Type of collision"
+    )
+
 st.markdown("---")
 
 # Predict button
 if st.button("🔮 Predict Severity", type="primary", use_container_width=True):
     with st.spinner("Analyzing conditions..."):
-        # Make prediction
-        result = predict_severity(
+        accident_date_str = str(accident_date)
+        accident_time_str = accident_time.strftime("%H:%M")
+
+        result = predict_severity_v2(
             weather=weather,
             road_condition=road_condition,
             accident_cause=accident_cause,
@@ -119,8 +144,25 @@ if st.button("🔮 Predict Severity", type="primary", use_container_width=True):
             nearby_accidents=nearby_accidents,
             hour=hour,
             day_of_week=day_of_week,
-            is_night=is_night
+            is_night=is_night,
+            speed_at_impact_kmh=speed_at_impact_kmh,
+            collision_type=collision_type,
+            accident_date_str=accident_date_str,
+            accident_time_str=accident_time_str,
         )
+
+        if result is None:
+            result = predict_severity(
+                weather=weather,
+                road_condition=road_condition,
+                accident_cause=accident_cause,
+                traffic_density=traffic_density,
+                vehicles_involved=vehicles_involved,
+                nearby_accidents=nearby_accidents,
+                hour=hour,
+                day_of_week=day_of_week,
+                is_night=is_night
+            )
         
         # Display results
         st.markdown("### Prediction Results")

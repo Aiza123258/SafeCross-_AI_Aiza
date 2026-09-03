@@ -11,13 +11,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 st.set_page_config(page_title="Emergency Response - SafeCross AI", page_icon="", layout="wide")
 
 try:
-    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand
+    from utils.ui_components import inject_global_css, render_page_header, render_footer, render_sidebar_brand, render_sidebar_about, render_sidebar_nav, render_sidebar_footer, render_top_nav, render_detection_settings_panel
     inject_global_css()
     HAS_UI = True
 except ImportError:
     HAS_UI = False
 
 if HAS_UI:
+    render_top_nav()
     render_page_header("Emergency Response Advisor", "Scenario-based emergency guidance, first aid protocols, and contact information for Pakistan")
 else:
     st.markdown("## Emergency Response Advisor")
@@ -25,10 +26,14 @@ else:
 with st.sidebar:
     if HAS_UI:
         render_sidebar_brand()
+        render_sidebar_about()
+        render_sidebar_nav()
+        render_detection_settings_panel()
+        render_sidebar_footer()
 
-st.warning("""
-**Decision Support Only:** This advisor provides general emergency response 
-guidance based on accident conditions. It does NOT dispatch emergency services. 
+st.info("""
+**Note:** This advisor provides general emergency response
+guidance based on accident conditions. It does NOT dispatch emergency services.
 Always call official emergency numbers for actual incidents.
 """)
 

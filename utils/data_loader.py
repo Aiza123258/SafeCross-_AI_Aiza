@@ -74,6 +74,30 @@ def load_feature_meta():
         return joblib.load(original_path)
     return None
 
+@st.cache_resource
+def load_severity_model_v2():
+    """Load the Pakistan V2 severity model (HistGradientBoosting, 98.5% accuracy)."""
+    path = os.path.join(ARTIFACTS_DIR, "severity_model_v2.pkl")
+    if not os.path.exists(path):
+        return None
+    return joblib.load(path)
+
+@st.cache_resource
+def load_encoders_v2():
+    """Load the Pakistan V2 feature encoders."""
+    path = os.path.join(ARTIFACTS_DIR, "encoders_v2.pkl")
+    if not os.path.exists(path):
+        return None
+    return joblib.load(path)
+
+@st.cache_resource
+def load_feature_meta_v2():
+    """Load the Pakistan V2 feature metadata."""
+    path = os.path.join(ARTIFACTS_DIR, "feature_meta_v2.pkl")
+    if not os.path.exists(path):
+        return None
+    return joblib.load(path)
+
 @st.cache_data
 def load_pakistan_stats():
     """Load cleaned Pakistan statistics."""
